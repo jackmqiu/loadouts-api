@@ -1,29 +1,76 @@
-import cluster from 'cluster';
-import config from './config';
-import App from './app';
-import Web from './web';
-import { logger } from './services/logger';
+const express = require('express')
+const bodyParser = require('body-parser')
+const app = express()
+const MongoClient = require('mongodb').MongoClient
+require('dotenv').config('../.env')
 
-if (cluster.isMaster) {
-  logger.info('Master process is up');
-  logger.info(`Forking ${config.webConcurrency} workers`);
+// Connecting to MongoDB
+let db;
 
-  // Fork workers.
-  for (let i = 0; i < config.webConcurrency; i += 1) {
-    cluster.fork();
-  }
+MongoClient.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.dtjm7.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`, (err, client) => {
+  console.log('env', process.env.DB_USERNAME);
+  if (err)
+    return console.log(err)
+  db = client.db('loadouts')
+  app.listen(process.env.PORT || 3002, () => {
+    console.log('listening on 3002')
+  })
+})
 
-  cluster.on('exit', (worker, code, signal) => {
-    if (code !== 0) {
-      const newWorker = cluster.fork();
-      logger.info(`Worker ${worker.process.pid} died. Starting new worker ${newWorker.process.id}`);
-    }
+//middleware
+app.use(bodyParser.urlencoded({extended: true}))
 
-    logger.info(`Worker ${worker.process.pid} exited`, { code, signal });
-  });
-} else {
-  const web = new Web(new App(config));
-  web.service.listen(config.port, () => {
-    logger.info(`Worker process is up and listening to port ${config.port}`);
-  });
-}
+app.use(bodyParser.json())
+
+// folder structure
+app.use(express.static('public'))
+
+// GET
+app.get('/', (req, res) => res.status(200).end());
+app.get('/:id', (req, res) => {
+  console.log('req.params', req.params.id);
+  db.collection('igLoadouts').findOne({
+    _id: req.params.id,
+  }, (err, result) => {
+    console.log('result', result)
+    res.send(result)
+  })
+});
+// POST
+app.post('/make', (req, res) => {
+  db.collection('igLoadouts').insertOne(req.body, (err, result) => {
+    if (err)
+      return console.log(err)
+
+    console.log('saved to database')
+
+  })
+  res.status(200).end();
+})
+
+// PUT
+// app.put('/messages', (req, res) => {
+//   db.collection('messages')
+//   .findOneAndUpdate({name: req.body.targetName}, {
+//     $set: {
+//       name: req.body.name,
+//       message: req.body.message
+//     }
+//   }, {
+//     sort: {_id: -1},
+//     upsert: true
+//   }, (err, result) => {
+//     if (err) return res.send(err)
+//     res.send(result)
+//   })
+// })
+
+// DELETE
+// app.delete('/messages', (req, res) => {
+//   db.collection('messages').findOneAndDelete(
+//     {name: req.body.name},
+//     (err, result) => {
+//     if (err) return res.send(500, err)
+//     res.send({message: 'The message has been deleted'})
+//   })
+// })
