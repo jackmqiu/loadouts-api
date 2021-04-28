@@ -1,5 +1,6 @@
 const express = require('express')
 const bodyParser = require('body-parser')
+const cors = require('cors');
 const app = express()
 const MongoClient = require('mongodb').MongoClient
 require('dotenv').config('../.env')
@@ -13,13 +14,13 @@ MongoClient.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_P
     return console.log(err)
   db = client.db('loadouts')
   app.listen(process.env.PORT || 3002, () => {
-    console.log('listening on 3002')
+    console.log(`listening on ${process.env.PORT}`)
   })
 })
 
 //middleware
 app.use(bodyParser.urlencoded({extended: true}))
-
+app.use(cors())
 app.use(bodyParser.json())
 
 // folder structure
