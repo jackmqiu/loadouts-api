@@ -1,7 +1,7 @@
 node_modules
 .env
 package-lock.json
-
+build
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
