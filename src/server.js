@@ -28,6 +28,12 @@ app.use(express.static('public'))
 
 // GET
 app.get('/', (req, res) => res.status(200).end());
+app.get('/feed/:category', (req, res) => {
+  db.collection('igLoadouts').find({category: req.params.category}).sort({dateCreated: -1}).limit(10).toArray()
+  .then((result) => {
+    res.send(result);
+  })
+})
 app.get('/:id', (req, res) => {
   console.log('req.params', req.params.id);
   db.collection('igLoadouts').findOne({
