@@ -25,10 +25,10 @@ gulp.task('copy-static', () => gulp.src(['package*.json', 'Dockerfile']).pipe(gu
 // dockerize
 gulp.task('dockerize', () => {
   shell.task([
-    `aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin 394755393450.dkr.ecr.us-west-1.amazonaws.com`,
-    `docker build -t loadouts-api-dev .`,
-    `docker tag loadouts-api-dev:${tag} ${AWS_DOCKER_REPO}/loadouts-api-dev:${tag}`,
-    `docker push ${AWS_DOCKER_REPO}/loadouts-api-dev:${tag}`
+    `aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin ${process.env.AWS_DOCKER_REPO}`,
+    `docker build -t ${process.env.AWS_ECR} .`,
+    `docker tag ${process.env.AWS_ECR}:${tag} ${process.env.AWS_DOCKER_REPO}/${process.env.AWS_ECR}:${tag}`,
+    `docker push ${process.env.AWS_DOCKER_REPO}/${process.env.AWS_ECR}:${tag}`
   ], { cwd: distPath })();
 }, function(done) {
   done();
