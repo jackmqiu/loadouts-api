@@ -11,6 +11,7 @@ POST /make
 	"_id": "jaksloadout3",
 	"email": "jackqiu2016@gmail.com",
   "category": "airsoft",
+  "title":"M4 Loadout",
   "items":
       {
       "0": {
