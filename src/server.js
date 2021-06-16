@@ -27,7 +27,6 @@ app.use(bodyParser.json())
 app.use(express.static('public'))
 
 // GET
-app.get('/', (req, res) => res.status(200).end());
 app.get('/feed/:category', (req, res) => {
   db.collection('igLoadouts').find({category: req.params.category}).sort({dateCreated: -1}).limit(10).toArray()
   .then((result) => {
@@ -39,10 +38,18 @@ app.get('/:id', (req, res) => {
   db.collection('igLoadouts').findOne({
     _id: req.params.id,
   }, (err, result) => {
-    console.log('result', result)
-    res.send(result)
+    res.send(result);
   })
 });
+app.get('/ui/:page/:category', (req, res) => {
+  db.collection('discoverUI').findOne({
+    //page: `${req.params.page}_${req.params.category}`,
+    page: `discover_main`,
+  }, (err, result) => {
+    res.send(result);
+  })
+})
+app.get('/', (req, res) => res.status(200).end());
 // POST
 app.post('/make', (req, res) => {
   db.collection('igLoadouts').insertOne(req.body, (err, result) => {
