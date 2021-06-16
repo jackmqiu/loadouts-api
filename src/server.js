@@ -39,10 +39,17 @@ app.get('/:id', (req, res) => {
   db.collection('igLoadouts').findOne({
     _id: req.params.id,
   }, (err, result) => {
-    console.log('result', result)
-    res.send(result)
+    res.send(result);
   })
 });
+app.get('/ui/:page/:category', (req, res) => {
+  db.collection('discoverUI').findOne({
+    //page: `${req.params.page}_${req.params.category}`,
+    page: `discover_main`,
+  }, (err, result) => {
+    res.send(result);
+  })
+})
 // POST
 app.post('/make', (req, res) => {
   db.collection('igLoadouts').insertOne(req.body, (err, result) => {
