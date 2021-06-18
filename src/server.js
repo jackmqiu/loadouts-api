@@ -12,7 +12,7 @@ MongoClient.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_P
   console.log('env', process.env.DB_USERNAME);
   if (err)
     return console.log(err)
-  db = client.db('loadouts')
+  db = client.db(process.env.DB_CLUSTER)
   app.listen(process.env.PORT || 3002, () => {
     console.log(`listening on ${process.env.PORT}`)
   })
