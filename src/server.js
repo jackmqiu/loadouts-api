@@ -33,6 +33,15 @@ app.get('/feed/:category', (req, res) => {
     res.send(result);
   })
 })
+app.get('/byhashtag/:hashtag', (req, res) => {
+  const key = 'hashtags.'.concat(req.params.hashtag)
+  db.collection('igLoadouts').find({
+    [key]:true
+  }).limit(10).toArray()
+  .then((result) => {
+    res.send(result);
+  })
+})
 app.get('/:id', (req, res) => {
   console.log('req.params', req.params.id);
   db.collection('igLoadouts').findOne({
@@ -55,9 +64,6 @@ app.post('/make', (req, res) => {
   db.collection('igLoadouts').insertOne(req.body, (err, result) => {
     if (err)
       return console.log(err)
-
-    console.log('saved to database')
-
   })
   res.status(200).end();
 })
