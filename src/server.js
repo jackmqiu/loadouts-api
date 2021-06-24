@@ -12,7 +12,7 @@ MongoClient.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_P
   console.log('env', process.env.DB_USERNAME);
   if (err)
     return console.log(err)
-  db = client.db('loadouts')
+  db = client.db(process.env.DB_CLUSTER)
   app.listen(process.env.PORT || 3002, () => {
     console.log(`listening on ${process.env.PORT}`)
   })
@@ -28,7 +28,16 @@ app.use(express.static('public'))
 
 // GET
 app.get('/feed/:category', (req, res) => {
-  db.collection('igLoadouts').find({category: req.params.category}).sort({dateCreated: -1}).limit(10).toArray()
+  db.collection('igLoadouts').find({category: req.params.category}).sort({dateCreated: -1}).limit(20).toArray()
+  .then((result) => {
+    res.send(result);
+  })
+})
+app.get('/byhashtag/:hashtag', (req, res) => {
+  const key = 'hashtags.'.concat(req.params.hashtag)
+  db.collection('igLoadouts').find({
+    [key]:true
+  }).limit(10).toArray()
   .then((result) => {
     res.send(result);
   })
@@ -55,9 +64,6 @@ app.post('/make', (req, res) => {
   db.collection('igLoadouts').insertOne(req.body, (err, result) => {
     if (err)
       return console.log(err)
-
-    console.log('saved to database')
-
   })
   res.status(200).end();
 })
