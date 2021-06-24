@@ -28,7 +28,7 @@ app.use(express.static('public'))
 
 // GET
 app.get('/feed/:category', (req, res) => {
-  db.collection('igLoadouts').find({category: req.params.category}).sort({dateCreated: -1}).limit(10).toArray()
+  db.collection('igLoadouts').find({category: req.params.category}).sort({dateCreated: -1}).limit(20).toArray()
   .then((result) => {
     res.send(result);
   })
