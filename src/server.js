@@ -69,21 +69,23 @@ app.post('/make', (req, res) => {
 })
 
 // PUT
-// app.put('/messages', (req, res) => {
-//   db.collection('messages')
-//   .findOneAndUpdate({name: req.body.targetName}, {
-//     $set: {
-//       name: req.body.name,
-//       message: req.body.message
-//     }
-//   }, {
-//     sort: {_id: -1},
-//     upsert: true
-//   }, (err, result) => {
-//     if (err) return res.send(err)
-//     res.send(result)
-//   })
-// })
+app.put('/comments/:id', (req, res) => {
+  console.log('/PUT req.params', req.params.id)
+  db.collection('igLoadouts')
+  .findOneAndUpdate({
+    _id: req.params.id
+  }, {
+    $push: {
+      comments: req.body,
+    }
+  }, {
+    sort: {_id: -1},
+    upsert: true
+  }, (err, result) => {
+    if (err) return res.send(err)
+    res.send(result)
+  })
+})
 
 // DELETE
 // app.delete('/messages', (req, res) => {
