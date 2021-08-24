@@ -60,6 +60,7 @@ app.get('/ui/:page/:category', (req, res) => {
 })
 app.get('/', (req, res) => res.status(200).end());
 // POST
+// add loadout
 app.post('/make', (req, res) => {
   db.collection('igLoadouts').insertOne(req.body, (err, result) => {
     if (err)
@@ -68,7 +69,26 @@ app.post('/make', (req, res) => {
   res.status(200).end();
 })
 
+// send like
+app.post('/likes/:id', (req, res) => {
+  console.log('/POST LIKE');
+  db.collection('igLoadouts')
+  .findOneAndUpdate({
+    _id: req.params.id
+  }, {
+    $inc: {
+      likes: 1
+    }
+  }, {
+      upsert: true,
+  }, (err, result) => {
+    if (err) return res.send(err)
+    res.send(result)
+  })
+})
+
 // PUT
+// add comment
 app.put('/comments/:id', (req, res) => {
   console.log('/PUT req.params', req.params.id)
   db.collection('igLoadouts')
@@ -86,6 +106,7 @@ app.put('/comments/:id', (req, res) => {
     res.send(result)
   })
 })
+
 
 // DELETE
 // app.delete('/messages', (req, res) => {
