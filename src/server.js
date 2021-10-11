@@ -4,9 +4,23 @@ const cors = require('cors');
 const app = express()
 const MongoClient = require('mongodb').MongoClient
 require('dotenv').config('../.env')
+const jwt = require('express-jwt');
+const jwks = require('jwks-rsa');
 
 // Connecting to MongoDB
 let db;
+
+var jwtCheck = jwt({
+      secret: jwks.expressJwtSecret({
+          cache: true,
+          rateLimit: true,
+          jwksRequestsPerMinute: 5,
+          jwksUri: 'https://loadoutsdotme.us.auth0.com/.well-known/jwks.json'
+    }),
+    audience: 'https://loadoutsapi.me',
+    issuer: 'https://loadoutsdotme.us.auth0.com/',
+    algorithms: ['RS256']
+});
 
 MongoClient.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.dtjm7.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`, (err, client) => {
   console.log('env', process.env.DB_USERNAME);
@@ -104,6 +118,33 @@ app.put('/comments/:id', (req, res) => {
   }, (err, result) => {
     if (err) return res.send(err)
     res.send(result)
+  })
+})
+
+//USER MANAGMENT
+app.get(`/users/find`, (req, res) => {
+  db.collection('Users')
+  .findOne({ email: req.body.email }, (err, result) => {
+    if (err) return res.send(err)
+    res.send(result);
+  })
+})
+
+// app.use(jwtCheck); // AUTHENTICATED ROUTES
+
+app.post('/users/new', (req, res) => {
+  console.log('/POST user', req.body);
+  db.collection('Users')
+  .findOne({ email: req.body.email}, (err, result) => {
+    if (result._id) {
+      res.send('account associated with this email');
+    } else {
+      db.collection('Users')
+      .insertOne(req.body, (err, result) => {
+        if (err) return res.send(err)
+        res.send(result);
+      })
+    }
   })
 })
 
