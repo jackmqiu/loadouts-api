@@ -148,6 +148,20 @@ app.post('/users/new', (req, res) => {
   })
 })
 
+app.post('/scaffold/new/:email', (req, res) => {
+  console.log('/POST scaffold', req.params.email);
+  db.collection('Users')
+  .findOneAndUpdate({ email: req.params.email },
+    {
+      $push: { scaffolds: req.body.scaffolds },
+    }, (err, result) => {
+      if (!result) {
+        res.send('account not found');
+      } else {
+        res.send(result);
+      }
+    })
+})
 
 // DELETE
 // app.delete('/messages', (req, res) => {
