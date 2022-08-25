@@ -6,7 +6,6 @@ const MongoClient = require('mongodb').MongoClient
 require('dotenv').config('../.env')
 const jwt = require('express-jwt');
 const jwks = require('jwks-rsa');
-
 // Connecting to MongoDB
 let db;
 
@@ -41,12 +40,21 @@ app.use(bodyParser.json())
 app.use(express.static('public'))
 
 // GET
+app.get('/feed/:category/:page', (req, res) => {
+  const skip = req.params.page && req.params.page * 8 || 0;
+  db.collection('igLoadouts').find({category: req.params.category}).sort({dateCreated: -1}).skip(skip).limit(8).toArray()
+  .then((result) => {
+    res.send(result);
+  })
+})
+
 app.get('/feed/:category', (req, res) => {
   db.collection('igLoadouts').find({category: req.params.category}).sort({dateCreated: -1}).limit(20).toArray()
   .then((result) => {
     res.send(result);
   })
 })
+
 app.get('/byhashtag/:hashtag', (req, res) => {
   const key = 'hashtags.'.concat(req.params.hashtag)
   db.collection('igLoadouts').find({
