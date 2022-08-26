@@ -41,8 +41,9 @@ app.use(express.static('public'))
 
 // GET
 app.get('/feed/:category/:page', (req, res) => {
-  const skip = req.params.page && req.params.page * 8 || 0;
-  db.collection('igLoadouts').find({category: req.params.category}).sort({dateCreated: -1}).skip(skip).limit(8).toArray()
+  const skip = req.params.page && req.params.page * 6 || 0;
+  console.log('skyp', skip)
+  db.collection('igLoadouts').find({category: req.params.category}).skip(skip).limit(6).toArray()
   .then((result) => {
     res.send(result);
   })
