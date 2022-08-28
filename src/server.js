@@ -27,35 +27,18 @@ const store = new MongoDBStore({
 
 let db;
 
-// var jwtCheck = jwt({
-//       secret: jwks.expressJwtSecret({
-//           cache: true,
-//           rateLimit: true,
-//           jwksRequestsPerMinute: 5,
-//           jwksUri: 'https://loadoutsdotme.us.auth0.com/.well-known/jwks.json'
-//     }),
-//     audience: 'https://loadoutsapi.me',
-//     issuer: 'https://loadoutsdotme.us.auth0.com/',
-//     algorithms: ['RS256']
-// });
-
 MongoClient.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.dtjm7.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`, (err, mongoClientPromise) => {
   console.log('env', process.env.DB_USERNAME);
   if (err)
     return console.log(err)
   db = mongoClientPromise.db(process.env.DB_CLUSTER)
-  // app.listen(process.env.PORT || 3002, () => {
-  //   console.log(`listening on ${process.env.PORT}`)
-  // })
 })
 
 passport.use(new LocalStrategy(function verify(email, password, cb) {
-  console.log('local strategy verify function', email, password, cb)
   db.collection('Users')
     .findOne({ email: email}, (err, result) => {
       if (err) { return cb(err); }
       if (!result) { return cb(null, false, { message: 'Incorrect username or password.' }); }
-        console.log('findOne by email:', result, result.password, password);
       bcrypt.compare(password, result.password, (err, isMatch) => {
         if (err) throw err;
         if (isMatch) {
@@ -69,12 +52,10 @@ passport.use(new LocalStrategy(function verify(email, password, cb) {
 }));
 
 passport.serializeUser(function(user, cb) {
-  console.log('passort serializeUser:', user)
   cb(null, user._id)
 });
 
 passport.deserializeUser(function(id, cb) {
-  console.log('passort deserializeUser:', id)
   db.collection('Users')
   .findOne({ _id: id}, (err, user) => {
     cb(err, user)
