@@ -4,8 +4,6 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const app = express()
 require('dotenv').config('../.env')
-// const jwt = require('express-jwt');
-// const jwks = require('jwks-rsa');
 
 const passport = require('passport');
 const LocalStrategy = require('passport-local');
@@ -17,7 +15,6 @@ const MongoClient = require('mongodb').MongoClient
 const logger = require('morgan');
 const { doesNotMatch } = require('assert');
 
-// const authRouter = require('./web/router/authRouter');
 
 // Connecting to MongoDB
 const store = new MongoDBStore({
