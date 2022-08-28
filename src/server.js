@@ -1,46 +1,107 @@
 const express = require('express')
-const bodyParser = require('body-parser')
+const path = require('path');
 const cors = require('cors');
+const bcrypt = require('bcryptjs');
 const app = express()
-const MongoClient = require('mongodb').MongoClient
 require('dotenv').config('../.env')
-const jwt = require('express-jwt');
-const jwks = require('jwks-rsa');
-// Connecting to MongoDB
-let db;
+// const jwt = require('express-jwt');
+// const jwks = require('jwks-rsa');
 
-var jwtCheck = jwt({
-      secret: jwks.expressJwtSecret({
-          cache: true,
-          rateLimit: true,
-          jwksRequestsPerMinute: 5,
-          jwksUri: 'https://loadoutsdotme.us.auth0.com/.well-known/jwks.json'
-    }),
-    audience: 'https://loadoutsapi.me',
-    issuer: 'https://loadoutsdotme.us.auth0.com/',
-    algorithms: ['RS256']
+const passport = require('passport');
+const LocalStrategy = require('passport-local');
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(session);
+const MongoClient = require('mongodb').MongoClient
+
+const logger = require('morgan');
+const { doesNotMatch } = require('assert');
+
+// const authRouter = require('./web/router/authRouter');
+
+// Connecting to MongoDB
+const store = new MongoDBStore({
+  uri: `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.dtjm7.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`,
+  collection: process.env.DB_USERNAME,
 });
 
-MongoClient.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.dtjm7.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`, (err, client) => {
+let db;
+
+// var jwtCheck = jwt({
+//       secret: jwks.expressJwtSecret({
+//           cache: true,
+//           rateLimit: true,
+//           jwksRequestsPerMinute: 5,
+//           jwksUri: 'https://loadoutsdotme.us.auth0.com/.well-known/jwks.json'
+//     }),
+//     audience: 'https://loadoutsapi.me',
+//     issuer: 'https://loadoutsdotme.us.auth0.com/',
+//     algorithms: ['RS256']
+// });
+
+MongoClient.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.dtjm7.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`, (err, mongoClientPromise) => {
   console.log('env', process.env.DB_USERNAME);
   if (err)
     return console.log(err)
-  db = client.db(process.env.DB_CLUSTER)
-  app.listen(process.env.PORT || 3002, () => {
-    console.log(`listening on ${process.env.PORT}`)
-  })
+  db = mongoClientPromise.db(process.env.DB_CLUSTER)
+  // app.listen(process.env.PORT || 3002, () => {
+  //   console.log(`listening on ${process.env.PORT}`)
+  // })
 })
 
+passport.use(new LocalStrategy(function verify(email, password, cb) {
+  console.log('local strategy verify function', email, password, cb)
+  db.collection('Users')
+    .findOne({ email: email}, (err, result) => {
+      if (err) { return cb(err); }
+      if (!result) { return cb(null, false, { message: 'Incorrect username or password.' }); }
+        console.log('findOne by email:', result, result.password, password);
+      bcrypt.compare(password, result.password, (err, isMatch) => {
+        if (err) throw err;
+        if (isMatch) {
+          return cb(null, result);
+        } else {
+          return cb(null, false, "Wrong Password")
+        }
+      })
+    })
+
+}));
+
+passport.serializeUser(function(user, cb) {
+  console.log('passort serializeUser:', user)
+  cb(null, user._id)
+});
+
+passport.deserializeUser(function(id, cb) {
+  console.log('passort deserializeUser:', id)
+  db.collection('Users')
+  .findOne({ _id: id}, (err, user) => {
+    cb(err, user)
+  })
+});
+
 //middleware
-app.use(bodyParser.urlencoded({extended: true}))
 app.use(cors())
-app.use(bodyParser.json())
+app.use(express.json())
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(session({
+  secret: 'keyboard cat',
+  resave: false, // don't save session if unmodified
+  saveUninitialized: false, // don't create session until something stored
+  store: store,
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 // folder structure
 app.use(express.static('public'))
 
 // GET
 app.get('/feed/:category/:page', (req, res) => {
+  console.log('GET /feed/:category/:page')
   const skip = req.params.page && req.params.page * 6 || 0;
   console.log('skyp', skip)
   db.collection('igLoadouts').find({category: req.params.category}).skip(skip).limit(6).toArray()
@@ -50,6 +111,7 @@ app.get('/feed/:category/:page', (req, res) => {
 })
 
 app.get('/feed/:category', (req, res) => {
+  console.log('GET /feed/:category')
   db.collection('igLoadouts').find({category: req.params.category}).sort({dateCreated: -1}).limit(20).toArray()
   .then((result) => {
     res.send(result);
@@ -57,6 +119,7 @@ app.get('/feed/:category', (req, res) => {
 })
 
 app.get('/byhashtag/:hashtag', (req, res) => {
+  console.log('GET /byhastag/:hastag');
   const key = 'hashtags.'.concat(req.params.hashtag)
   db.collection('igLoadouts').find({
     [key]:true
@@ -74,6 +137,7 @@ app.get('/:id', (req, res) => {
   })
 });
 app.get('/ui/:page/:category', (req, res) => {
+  console.log('GET /ui/:page/:category')
   db.collection('discoverUI').findOne({
     //page: `${req.params.page}_${req.params.category}`,
     page: `discover_main`,
@@ -81,7 +145,10 @@ app.get('/ui/:page/:category', (req, res) => {
     res.send(result);
   })
 })
-app.get('/', (req, res) => res.status(200).end());
+app.get('/', (req, res) => {
+  console.log('GET /')
+  res.status(200).end()
+});
 // POST
 // add loadout
 app.post('/make', (req, res) => {
@@ -132,6 +199,7 @@ app.put('/comments/:id', (req, res) => {
 
 //USER MANAGMENT
 app.get(`/users/find`, (req, res) => {
+  console.log('GET /users/find')
   db.collection('Users')
   .findOne({ email: req.body.email }, (err, result) => {
     if (err) return res.send(err)
@@ -145,32 +213,45 @@ app.post('/users/new', (req, res) => {
   console.log('/POST user', req.body);
   db.collection('Users')
   .findOne({ email: req.body.email}, (err, result) => {
-    if (result._id) {
+    if (result?._id) {
       res.send('account associated with this email');
     } else {
-      db.collection('Users')
-      .insertOne(req.body, (err, result) => {
-        if (err) return res.send(err)
-        res.send(result);
-      })
+        bcrypt.genSalt(10, (err, salt) => {
+          if (err) { return next(err); }
+          bcrypt.hash(req.body.password, salt, (err, hashedPassword) => {
+            if (err) { return next(err); }
+            db.collection('Users')
+            .insertOne({
+              email: req.body.email,
+              password: hashedPassword,
+              userName: req.body.userName || req.body.email,
+            }, (err, result) => {
+              if (err) return res.send(err)
+              res.send(result);
+            })
+          });
+        })
     }
   })
 })
 
-app.post('/scaffold/new/:email', (req, res) => {
-  console.log('/POST scaffold', req.params.email);
-  db.collection('Users')
-  .findOneAndUpdate({ email: req.params.email },
-    {
-      $push: { scaffolds: req.body.scaffolds },
-    }, (err, result) => {
-      if (!result) {
-        res.send('account not found');
-      } else {
-        res.send(result);
+app.post('/login/password', (req, res, next) => {
+  console.log('POST /login/password', req.body)
+  passport.authenticate('local', (err, user, info) => {
+    if (err) {
+      return res.status(400).json({ errors: err })
+    } 
+    if (!user) {
+      return res.status(400).json({ errors: "No users found"})
+    }
+    req.logIn(user, (err) => {
+      if (err) {
+        return res.status(400).json({ errors: err })
       }
+      return res.status(200).json({ success: `logged in ${user.email}`})
     })
-})
+  })(req, res, next)
+});
 
 // DELETE
 // app.delete('/messages', (req, res) => {
@@ -181,3 +262,7 @@ app.post('/scaffold/new/:email', (req, res) => {
 //     res.send({message: 'The message has been deleted'})
 //   })
 // })
+
+app.listen(process.env.PORT || 3002, () => console.log(
+  `Example app listening on port ${3002}`
+));
