@@ -240,6 +240,13 @@ app.post('/login/password', (req, res, next) => {
   })(req, res, next)
 });
 
+app.post('/logout', function(req, res, next) {
+  req.logout(function(err) {
+    if (err) { return next(err); }
+    return res.status(200).json({ success: "logged out"})
+  });
+});
+
 // DELETE
 // app.delete('/messages', (req, res) => {
 //   db.collection('messages').findOneAndDelete(
