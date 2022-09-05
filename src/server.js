@@ -202,7 +202,7 @@ app.post('/users/new', (req, res) => {
   .findOne({ email: req.body.email}, (err, result) => {
     if (result?._id) {
       res.send('account associated with this email');
-    } else {
+    } else if (req.body.email.length > 0) {
         bcrypt.genSalt(10, (err, salt) => {
           if (err) { return next(err); }
           bcrypt.hash(req.body.password, salt, (err, hashedPassword) => {
