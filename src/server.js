@@ -137,6 +137,15 @@ app.post('/make', (req, res) => {
   res.status(200).end();
 })
 
+// add build
+app.post('/build/new', (req, res) => {
+  db.collection('builds').insertOne(req.body, (err, results) => {
+    if (err)
+      return console.log(err);
+  })
+  res.status(200).end();
+})
+
 // send like
 app.post('/likes/:id', (req, res) => {
   console.log('/POST LIKE');
@@ -226,7 +235,7 @@ app.post('/login/password', (req, res, next) => {
       if (err) {
         return res.status(400).json({ errors: err })
       }
-      return res.status(200).json({ success: `logged in ${user.email}`})
+      return res.status(200).json({ success: user })
     })
   })(req, res, next)
 });
