@@ -211,7 +211,7 @@ app.post('/users/new', (req, res) => {
             .insertOne({
               email: req.body.email,
               password: hashedPassword,
-              userName: req.body.userName || req.body.email,
+              username: req.body.username || req.body.email,
             }, (err, result) => {
               if (err) return res.send(err)
               res.send(result);
