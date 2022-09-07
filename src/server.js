@@ -78,6 +78,20 @@ app.use(passport.session());
 app.use(express.static('public'))
 
 // GET
+app.get('/l/:category/:class/:page', (req, res) => {
+  console.log('GET /feed/:category/:page')
+  const skip = req.params.page && req.params.page * 6 || 0;
+  console.log('skyp', skip)
+  db.collection('igLoadouts').find({
+    category: req.params.category,
+    class: req.params.class
+  }).skip(skip).limit(6).toArray()
+  .then((result) => {
+    res.send(result);
+  })
+})
+
+// GET
 app.get('/feed/:category/:page', (req, res) => {
   console.log('GET /feed/:category/:page')
   const skip = req.params.page && req.params.page * 6 || 0;
