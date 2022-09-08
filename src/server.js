@@ -145,10 +145,29 @@ app.get('/', (req, res) => {
 // add loadout
 app.post('/make', (req, res) => {
   db.collection('igLoadouts').insertOne(req.body, (err, result) => {
-    if (err)
+    if (err) {
       return console.log(err)
+    }
+    db.collection('Users')
+    .findOneAndUpdate({ email: req.body.email }, {
+      $push: {
+        loadouts: req.body,
+      },
+    },
+    {
+      sort: {_id: -1},
+      upsert: true
+    },
+    {
+      upsert: true,
+      returnDocument: 'after', // this is new !
+    }, (err, results) => {
+      if (err) {
+        return console.log(err);
+      }
+    })
+    res.status(200).json(result).end();
   })
-  res.status(200).end();
 })
 
 // add build
