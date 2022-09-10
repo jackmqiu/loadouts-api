@@ -78,6 +78,20 @@ app.use(passport.session());
 app.use(express.static('public'))
 
 // GET
+app.get('/l/:category/:class/:page', (req, res) => {
+  console.log('GET /feed/:category/:page')
+  const skip = req.params.page && req.params.page * 6 || 0;
+  console.log('skyp', skip)
+  db.collection('igLoadouts').find({
+    category: req.params.category,
+    class: req.params.class
+  }).skip(skip).limit(6).toArray()
+  .then((result) => {
+    res.send(result);
+  })
+})
+
+// GET
 app.get('/feed/:category/:page', (req, res) => {
   console.log('GET /feed/:category/:page')
   const skip = req.params.page && req.params.page * 6 || 0;
@@ -131,10 +145,29 @@ app.get('/', (req, res) => {
 // add loadout
 app.post('/make', (req, res) => {
   db.collection('igLoadouts').insertOne(req.body, (err, result) => {
-    if (err)
+    if (err) {
       return console.log(err)
+    }
+    db.collection('Users')
+    .findOneAndUpdate({ email: req.body.email }, {
+      $push: {
+        loadouts: req.body,
+      },
+    },
+    {
+      sort: {_id: -1},
+      upsert: true
+    },
+    {
+      upsert: true,
+      returnDocument: 'after', // this is new !
+    }, (err, results) => {
+      if (err) {
+        return console.log(err);
+      }
+    })
+    res.status(200).json(result).end();
   })
-  res.status(200).end();
 })
 
 // add build
@@ -186,11 +219,11 @@ app.put('/comments/:id', (req, res) => {
 
 //USER MANAGMENT
 app.get(`/users/find`, (req, res) => {
-  console.log('GET /users/find')
+  console.log('GET /users/find', req.query.email)
   db.collection('Users')
-  .findOne({ email: req.body.email }, (err, result) => {
+  .findOne({ email: req.query.email }, (err, result) => {
     if (err) return res.send(err)
-    res.send(result);
+    res.status(200).send(result);
   })
 })
 
@@ -202,7 +235,7 @@ app.post('/users/new', (req, res) => {
   .findOne({ email: req.body.email}, (err, result) => {
     if (result?._id) {
       res.send('account associated with this email');
-    } else {
+    } else if (req.body.email.length > 0) {
         bcrypt.genSalt(10, (err, salt) => {
           if (err) { return next(err); }
           bcrypt.hash(req.body.password, salt, (err, hashedPassword) => {
@@ -211,7 +244,7 @@ app.post('/users/new', (req, res) => {
             .insertOne({
               email: req.body.email,
               password: hashedPassword,
-              userName: req.body.userName || req.body.email,
+              username: req.body.username || req.body.email,
             }, (err, result) => {
               if (err) return res.send(err)
               res.send(result);
