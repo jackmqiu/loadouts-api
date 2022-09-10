@@ -219,11 +219,11 @@ app.put('/comments/:id', (req, res) => {
 
 //USER MANAGMENT
 app.get(`/users/find`, (req, res) => {
-  console.log('GET /users/find')
+  console.log('GET /users/find', req.query.email)
   db.collection('Users')
-  .findOne({ email: req.body.email }, (err, result) => {
+  .findOne({ email: req.query.email }, (err, result) => {
     if (err) return res.send(err)
-    res.send(result);
+    res.status(200).send(result);
   })
 })
 
