@@ -128,11 +128,10 @@ app.get('/:id', (req, res) => {
     res.send(result);
   })
 });
-app.get('/ui/:page/:category', (req, res) => {
-  console.log('GET /ui/:page/:category')
+app.get('/ui/:category/:page', (req, res) => {
+  console.log(`GET /ui/${req?.params?.category}/${req?.params?.page}`)
   db.collection('discoverUI').findOne({
-    //page: `${req.params.page}_${req.params.category}`,
-    page: `discover_main`,
+    page: `${req.params.category}_${req.params.page}`,
   }, (err, result) => {
     res.send(result);
   })
