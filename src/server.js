@@ -1,19 +1,30 @@
-const express = require('express')
-const path = require('path');
-const cors = require('cors');
-const bcrypt = require('bcryptjs');
+import express from 'express'
+import path, { resolve } from 'path';
+import cors from 'cors';
+import bcrypt from 'bcryptjs';
+import cheerio from 'cheerio';
+import axios from 'axios';
+import fetch from 'node-fetch';
+import AWS from 'aws-sdk'
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY,
+})
+
 const app = express()
-require('dotenv').config('../.env')
+import dotenv from 'dotenv';
+dotenv.config('../.env');
 
-const passport = require('passport');
-const LocalStrategy = require('passport-local');
-const cookieParser = require('cookie-parser');
-const session = require('express-session');
-const MongoDBStore = require('connect-mongodb-session')(session);
-const MongoClient = require('mongodb').MongoClient
+import passport from 'passport';
+import LocalStrategy from 'passport-local';
+import cookieParser from 'cookie-parser';
+import session from 'express-session';
+import logger from 'morgan';
+import { doesNotMatch } from 'assert';
 
-const logger = require('morgan');
-const { doesNotMatch } = require('assert');
+import MongoDB from 'connect-mongodb-session';
+const MongoDBStore = MongoDB(session)
+import { MongoClient } from 'mongodb';
 
 
 // Connecting to MongoDB
@@ -64,7 +75,7 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+// app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
   secret: 'keyboard cat',
   resave: false, // don't save session if unmodified
@@ -77,17 +88,105 @@ app.use(passport.session());
 // folder structure
 app.use(express.static('public'))
 
-// GET
-app.get('/l/:category/:class/:page', (req, res) => {
-  console.log('GET /feed/:category/:page')
-  const skip = req.params.page && req.params.page * 6 || 0;
-  console.log('skyp', skip)
-  db.collection('igLoadouts').find({
-    category: req.params.category,
-    class: req.params.class
-  }).skip(skip).limit(6).toArray()
-  .then((result) => {
-    res.send(result);
+//SCRAPE
+app.post('/scrape', (req, res) => {
+  console.log('/scrape', req.body.url)
+  axios(req.body.url)
+  .then(response => {
+    const html = response.data;
+    const $ = cheerio.load(html);
+    const items = [];
+    const productUrls = [];
+    $('.image-wrap', html).each((index, element) => {
+      const url = $(element).find('a').attr('href');
+      url !== undefined && url !== 'undefined' && productUrls.push(url);
+    })
+    Promise.all(
+        productUrls.map((productUrl) => {
+        const item = {
+          url: productUrl,
+          gunType: ['gbb'],
+          power: 'gas',
+        };
+        return new Promise ((resolve, reject) => {
+          if (typeof productUrl !== 'string') {
+            reject();
+          }
+          axios(productUrl)
+          .then(async (response) => {
+            const html = response.data;
+            const $ = cheerio.load(html);
+            const imageURL = $('.center-center').find('a > img').attr('src');
+            const altText = $('.center-center').find('a > img').attr('alt');
+            item.title = $('.product-info').find('h1').text();
+            item.manufacturer = $('.left-center').find('a').text();
+            if (imageURL) {
+              const res = await fetch(imageURL)
+              const blob = await res.buffer()
+              const uploadedImage = await s3.upload({
+                Bucket: process.env.AWS_S3_BUCKET_NAME,
+                Key: altText,
+                Body: blob,
+              }).promise()
+              item.s3ImgURL = uploadedImage.Location;
+            }
+            $('.prod_content').find('p > b').each((index, element) => {
+              const elementString = $(element).html();
+              if (elementString === 'Overall Length') { //LENGTH
+                const lengthString = $(element).next('span').text().substring(1)
+                if (lengthString.includes('inch')) {
+                  item.lengthUnits = 'in';
+                } else {
+                  item.lengthUnits = 'mm';
+                }
+                let lengthStrings = lengthString.split('-', 2);
+                if (lengthStrings?.[0].includes('/')) {
+                  lengthStrings = lengthStrings?.[0].split('/');
+                }
+                if (lengthStrings && lengthStrings.length > 1) {
+                  item.foldedLength = parseInt(lengthStrings?.[0]);
+                  item.length = parseInt(lengthStrings?.[1])
+                } else {
+                  item.length = parseInt(lengthStrings?.[0])
+                }
+              } else if (elementString === 'Weight') { //WEIGHT
+                const weightString = $(element).next('span').text().substring(1);
+                item.weight = parseInt(weightString);
+                if (weightString?.includes('lb')) {
+                  item.weightUnits = 'lb';
+                } else {
+                  item.weightUnits = 'g';
+                }
+              } else if (elementString === 'Magazine Capacity') { //MAG CAP
+                item.capacity = parseInt($(element).next('span').text().substring(1))
+              } else if (elementString === 'Muzzle Velocity') { //MUZZLE VELOCITY
+                item.muzzleVelocity = parseInt($(element).next('span').text().substring(1));
+              } else if (elementString === 'Fire Modes') { // FIRE MODES
+                item.fireModes = $(element).next('span').text().substring(1);
+              } else if (elementString === 'Gearbox') { //GEARBOX
+                item.gearbox = $(element).next('span').text().substring(1);
+              } else if (elementString === 'Barrel Thread') {
+                item.barrelThread = $(element).next('span').text().substring(1);
+              }
+            })
+            resolve(item)
+          })
+          .catch((err) => {
+            console.log(err);
+          })
+        })
+      })
+    )
+    .then((items) => {
+      db.collection('items').insertMany(items, { ordered: false }, (err, results) => {
+        if (err)
+          return console.log(err);
+      })
+      res.send('done')
+    })
+    .catch((err) => {
+      res.send(err)
+    })
   })
 })
 

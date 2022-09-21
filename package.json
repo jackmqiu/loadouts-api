@@ -3,14 +3,15 @@
   "version": "1.0.0",
   "description": "",
   "main": "./src/server.js",
+  "type": "module",
   "scripts": {
     "start": "node src/server.js",
     "dev": "npm run nodemon",
     "nodemon": "nodemon --exec babel-node -- src/server.js"
   },
-  "engines" : { 
-    "npm" : ">=7.0.0",
-    "node" : ">=14.15.4"
+  "engines": {
+    "npm": ">=7.0.0",
+    "node": ">=14.15.4"
   },
   "repository": {
     "type": "git",
@@ -23,8 +24,11 @@
   },
   "homepage": "https://github.com/jackmqiu/loadouts-api#readme",
   "dependencies": {
+    "aws-sdk": "^2.1219.0",
+    "axios": "^0.27.2",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.19.0",
+    "cheerio": "^1.0.0-rc.12",
     "connect-mongodb-session": "^3.1.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -33,6 +37,7 @@
     "express-session": "^1.17.3",
     "mongodb": "^4.1.2",
     "morgan": "^1.10.0",
+    "node-fetch": "^3.2.10",
     "passport": "^0.6.0",
     "passport-local": "^1.0.0",
     "path": "^0.12.7",
